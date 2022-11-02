@@ -32,6 +32,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: Overhead benchmark
         run: |
+          set -o pipefail
           bench/overhead.sh build clang++-18 5 | tee overhead.md
           REPORT_LEVEL=warning .github/run_and_report.sh overhead cat overhead.md
           { echo "## Overhead"; echo; cat overhead.md; } >> "$GITHUB_STEP_SUMMARY"
@@ -68,7 +69,7 @@ jobs:
           git clone --depth 1 https://github.com/Pranay7ej/tinyplayer.git tp
           .github/run_and_report.sh tinyplayer-configure cmake -S tp -B tp/build -DTP_BUILD_TESTS=OFF -DTP_WITH_SDL=OFF \
             -DCMAKE_CXX_COMPILER=clang++-18 \
-            -DCMAKE_CXX_FLAGS="-fpass-plugin=$PWD/build/pass/SpanTracePass.so -mllvm -spantrace-filter=^tp::" \
+            -DCMAKE_CXX_FLAGS="-fpass-plugin=$PWD/build/pass/SpanTracePass.so -Xclang -load -Xclang $PWD/build/pass/SpanTracePass.so -mllvm -spantrace-filter=^tp::" \
             -DCMAKE_CXX_STANDARD_LIBRARIES="$PWD/build/runtime/libspantrace.a -lpthread"
           .github/run_and_report.sh tinyplayer-build cmake --build tp/build -j --target tinyplayer
       - name: Play 20 s headless and trace it

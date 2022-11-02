@@ -4,7 +4,8 @@
 //   clang -O2 -fpass-plugin=libSpanTracePass.so foo.c -lspantrace
 //   opt -load-pass-plugin=libSpanTracePass.so -passes=spantrace in.ll -S
 //
-// Options (pass through clang with -mllvm):
+// Options (pass through clang with -mllvm; clang also needs
+// -Xclang -load -Xclang libSpanTracePass.so so they're registered in time):
 //   -spantrace-filter=<regex>   only instrument functions whose demangled name matches
 //   -spantrace-min-size=<N>     skip functions with fewer than N IR instructions
 #include <cstdint>

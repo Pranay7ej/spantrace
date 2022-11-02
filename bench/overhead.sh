@@ -20,7 +20,10 @@ mkdir -p "$out"
 common=(-O2 -std=c++17 -pthread)
 "$cxx" "${common[@]}" "$here/workload.cpp" -o "$out/plain"
 "$cxx" "${common[@]}" -fpass-plugin="$plugin" "$here/workload.cpp" "$rt" -o "$out/traced"
-"$cxx" "${common[@]}" -fpass-plugin="$plugin" -mllvm -spantrace-filter='^pipeline::' \
+# -mllvm options are parsed before -fpass-plugin loads the plugin, so the
+# plugin also has to be loaded with -Xclang -load for its flags to exist.
+"$cxx" "${common[@]}" -fpass-plugin="$plugin" -Xclang -load -Xclang "$plugin" \
+  -mllvm -spantrace-filter='^pipeline::' \
   "$here/workload.cpp" "$rt" -o "$out/filtered"
 
 # median of N runs for one phase

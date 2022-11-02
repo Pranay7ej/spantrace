@@ -33,6 +33,8 @@ tools/top.py app.json
   *demangled* name matches, e.g. `'^media::'`.
 - `-mllvm -spantrace-min-size=N` skips functions with fewer than N IR
   instructions (getters, trivial wrappers).
+- Clang parses `-mllvm` flags before `-fpass-plugin` loads anything, so to
+  use the options also pass `-Xclang -load -Xclang SpanTracePass.so`.
 - Works with `opt -passes=spantrace` too, which is how the tests drive it.
 
 **The runtime** (`runtime/spantrace.cc`)
