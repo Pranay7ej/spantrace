@@ -6,7 +6,7 @@ title="$1"; shift
 log=$(mktemp)
 "$@" 2>&1 | tee "$log"
 rc=${PIPESTATUS[0]}
-level=notice
+level=${REPORT_LEVEL:-notice}
 [ "$rc" -ne 0 ] && level=error
 body=$(tail -n 40 "$log" | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')
 echo "::${level} title=${title}::${body}"
