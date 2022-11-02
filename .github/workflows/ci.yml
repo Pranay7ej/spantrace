@@ -9,7 +9,7 @@ jobs:
     name: runtime (asan, no llvm)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: cmake -S . -B build -DSPANTRACE_BUILD_PASS=OFF -DSPANTRACE_SANITIZE=address
       - run: cmake --build build -j
       - run: ctest --test-dir build --output-on-failure
@@ -18,7 +18,7 @@ jobs:
     name: pass + runtime (llvm 18)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install LLVM 18
         run: |
           sudo apt-get update
@@ -33,10 +33,12 @@ jobs:
       - name: Overhead benchmark
         run: |
           bench/overhead.sh build clang++-18 5 | tee overhead.md
+          .github/run_and_report.sh overhead cat overhead.md > /dev/null
           { echo "## Overhead"; echo; cat overhead.md; } >> "$GITHUB_STEP_SUMMARY"
       - name: Top functions (traced workload)
         run: |
           python3 tools/top.py build/overhead/traced.json -n 15 | tee top.txt
+          .github/run_and_report.sh top-workload cat top.txt > /dev/null
           { echo '## top.py'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
@@ -50,7 +52,7 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install deps
         run: |
           sudo apt-get update
@@ -68,12 +70,13 @@ jobs:
             -DCMAKE_CXX_COMPILER=clang++-18 \
             -DCMAKE_CXX_FLAGS="-fpass-plugin=$PWD/build/pass/SpanTracePass.so -mllvm -spantrace-filter=^tp::" \
             -DCMAKE_CXX_STANDARD_LIBRARIES="$PWD/build/runtime/libspantrace.a -lpthread"
-          cmake --build tp/build -j --target tinyplayer
+          .github/run_and_report.sh tinyplayer-build cmake --build tp/build -j --target tinyplayer
       - name: Play 20 s headless and trace it
         run: |
           tp/tools/make_test_stream.sh stream 20
           SPANTRACE_OUT=tinyplayer.json tp/build/tinyplayer stream --headless --kbps 8000
           python3 tools/top.py tinyplayer.json -n 15 | tee top.txt
+          .github/run_and_report.sh top-tinyplayer cat top.txt > /dev/null
           { echo '## tinyplayer'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
