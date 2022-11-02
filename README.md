@@ -105,8 +105,52 @@ traced, only `pipeline::*` traced) and reports the median of 5 runs per phase:
 - `pipeline` — a packet parse/checksum loop with a few real functions, 2 threads
 - `sort` — `std::sort` with a lambda comparator that gets inlined away
 
-CI runs it on every push and puts the table in the job summary (`full` job),
-along with `top.py` output for the traced run.
+From CI (GitHub's `ubuntu-24.04` runner, clang 18, `-O2`):
+
+| phase | plain ms | traced ms | slowdown | only `pipeline::*` ms | slowdown |
+|---|---:|---:|---:|---:|---:|
+| fib | 12.4 | 400.2 | 32.3x | 10.6 | 0.85x |
+| pipeline | 60.2 | 235.0 | 3.9x | 65.8 | 1.09x |
+| sort | 129.5 | 213.0 | 1.6x | 118.8 | 0.92x |
+| total | 202.1 | 851.3 | 4.2x | 195.3 | 0.97x |
+
+- **`fib` is the worst case and it's bad: 32x.** The function body is a
+  compare and an add, so two clock reads and two ring writes per call dwarf
+  it. Anything that tiny should be skipped with `-spantrace-min-size` or the
+  filter.
+- **Real code with real functions pays ~4x**, mostly because `Checksum` and
+  `ParseHeader` are called ~12k times per round.
+- **`sort` only pays 1.6x** because the comparator was inlined into
+  `std::sort`'s internals before the pass ran, so only the introsort helpers
+  are traced. That's the "runs after the optimizer" choice paying off.
+- **With a filter the overhead disappears into the noise** (the sub-1.0x
+  numbers are just run-to-run variance on a shared CI machine). In practice
+  that's how I'd use it: trace everything once to see the shape, then narrow.
+- The fully traced run wrote a 94 MB trace and still dropped 39 million events
+  because the default ring is 256k events per thread. For a hot loop like this
+  you want a bigger `SPANTRACE_BUF_EVENTS`, or a filter.
+
+### A real program: tinyplayer
+
+CI also builds [tinyplayer](https://github.com/Pranay7ej/tinyplayer) with the
+plugin (`-spantrace-filter='^tp::'`, so only the player's own code) and plays
+a 20 s stream headless. Top of `top.py` for that run:
+
+```
+function                                                          calls    total ms     self ms
+tp::FfmpegPipeline::DecodeSome()                                   3542     849.825     721.662
+tp::FfmpegPipeline::Decoder::ConvertVideo(tp::VideoFrame*)          356     124.863     124.863
+tp::FfmpegPipeline::PresentVideo()                                 2599      10.338       9.772
+tp::FfmpegPipeline::Decoder::~Decoder()                               1       3.064       3.064
+tp::FfmpegPipeline::PositionUs()                                  15575       3.333       1.463
+tp::(anonymous namespace)::MemReader::Read(void*, unsigned …        558       1.276       1.276
+tp::Session::Step()                                                2599     866.456       0.920
+```
+
+Which is a useful answer on its own: nearly all the time is decoding (the
+self time of `DecodeSome` is FFmpeg, which isn't instrumented), then ~15% is
+`ConvertVideo` copying planes into the frame struct. The session logic,
+ABR and buffer bookkeeping don't even show up.
 
 ## Known limits
 
