@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  runtime-asan:
+    name: runtime (asan, no llvm)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DSPANTRACE_BUILD_PASS=OFF -DSPANTRACE_SANITIZE=address
+      - run: cmake --build build -j
+      - run: ctest --test-dir build --output-on-failure
+
+  full:
+    name: pass + runtime (llvm 18)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-18-dev llvm-18-tools clang-18 libpolly-18-dev \
+            libzstd-dev zlib1g-dev libedit-dev libffi-dev libcurl4-openssl-dev
+      - name: Configure
+        run: cmake -S . -B build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm
+      - name: Build
+        run: cmake --build build -j
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Overhead benchmark
+        run: |
+          bench/overhead.sh build clang++-18 5 | tee overhead.md
+          { echo "## Overhead"; echo; cat overhead.md; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Top functions (traced workload)
+        run: |
+          python3 tools/top.py build/overhead/traced.json -n 15 | tee top.txt
+          { echo '## top.py'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: traces
+          path: |
+            build/overhead/*.json
+            overhead.md
