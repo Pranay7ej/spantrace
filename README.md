@@ -103,7 +103,8 @@ traced, only `pipeline::*` traced) and reports the median of 5 runs per phase:
 - `pipeline` — a packet parse/checksum loop with a few real functions, 2 threads
 - `sort` — `std::sort` with a lambda comparator that gets inlined away
 
-OVERHEAD_TABLE
+CI runs it on every push and puts the table in the job summary (`full` job),
+along with `top.py` output for the traced run.
 
 ## Known limits
 
