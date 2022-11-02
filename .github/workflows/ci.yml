@@ -33,12 +33,12 @@ jobs:
       - name: Overhead benchmark
         run: |
           bench/overhead.sh build clang++-18 5 | tee overhead.md
-          .github/run_and_report.sh overhead cat overhead.md > /dev/null
+          .github/run_and_report.sh overhead cat overhead.md
           { echo "## Overhead"; echo; cat overhead.md; } >> "$GITHUB_STEP_SUMMARY"
       - name: Top functions (traced workload)
         run: |
           python3 tools/top.py build/overhead/traced.json -n 15 | tee top.txt
-          .github/run_and_report.sh top-workload cat top.txt > /dev/null
+          .github/run_and_report.sh top-workload cat top.txt
           { echo '## top.py'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
@@ -76,7 +76,7 @@ jobs:
           tp/tools/make_test_stream.sh stream 20
           SPANTRACE_OUT=tinyplayer.json tp/build/tinyplayer stream --headless --kbps 8000
           python3 tools/top.py tinyplayer.json -n 15 | tee top.txt
-          .github/run_and_report.sh top-tinyplayer cat top.txt > /dev/null
+          .github/run_and_report.sh top-tinyplayer cat top.txt
           { echo '## tinyplayer'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
