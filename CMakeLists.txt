@@ -11,6 +11,7 @@ endif()
 
 option(SPANTRACE_BUILD_PASS "Build the LLVM pass plugin (needs LLVM 18 dev files)" ON)
 option(SPANTRACE_BUILD_TESTS "Build tests" ON)
+option(SPANTRACE_REQUIRE_PASS "Fail instead of skipping the pass when LLVM is missing" OFF)
 set(SPANTRACE_SANITIZE "" CACHE STRING "Sanitizer for the runtime and its tests (address, ...)")
 
 find_package(Threads REQUIRED)
@@ -30,7 +31,11 @@ set_target_properties(spantrace PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINA
 
 # --- pass --------------------------------------------------------------------
 if(SPANTRACE_BUILD_PASS)
-  find_package(LLVM 18 CONFIG)
+  if(SPANTRACE_REQUIRE_PASS)
+    find_package(LLVM 18 CONFIG REQUIRED)
+  else()
+    find_package(LLVM 18 CONFIG)
+  endif()
   if(LLVM_FOUND)
     message(STATUS "LLVM ${LLVM_PACKAGE_VERSION} from ${LLVM_DIR}")
     add_library(SpanTracePass MODULE pass/SpanTracePass.cpp)

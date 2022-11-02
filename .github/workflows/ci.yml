@@ -25,7 +25,7 @@ jobs:
           sudo apt-get install -y llvm-18-dev llvm-18-tools clang-18 libpolly-18-dev \
             libzstd-dev zlib1g-dev libedit-dev libffi-dev libcurl4-openssl-dev
       - name: Configure
-        run: cmake -S . -B build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm
+        run: .github/run_and_report.sh configure cmake -S . -B build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm -DSPANTRACE_REQUIRE_PASS=ON
       - name: Build
         run: cmake --build build -j
       - name: Test
@@ -62,7 +62,7 @@ jobs:
             ffmpeg libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
       - name: Build spantrace
         run: |
-          cmake -S . -B build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm -DSPANTRACE_BUILD_TESTS=OFF
+          cmake -S . -B build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm -DSPANTRACE_BUILD_TESTS=OFF -DSPANTRACE_REQUIRE_PASS=ON
           cmake --build build -j
       - name: Build tinyplayer with the plugin
         run: |
