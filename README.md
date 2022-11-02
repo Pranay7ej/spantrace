@@ -119,7 +119,7 @@ From CI (GitHub's `ubuntu-24.04` runner, clang 18, `-O2`):
   it. Anything that tiny should be skipped with `-spantrace-min-size` or the
   filter.
 - **Real code with real functions pays ~4x**, mostly because `Checksum` and
-  `ParseHeader` are called ~12k times per round.
+  `ParseHeader` run once per (small) packet, so the per-call cost adds up.
 - **`sort` only pays 1.6x** because the comparator was inlined into
   `std::sort`'s internals before the pass ran, so only the introsort helpers
   are traced. That's the "runs after the optimizer" choice paying off.
