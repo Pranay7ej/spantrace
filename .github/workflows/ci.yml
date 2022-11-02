@@ -66,7 +66,7 @@ jobs:
       - name: Build tinyplayer with the plugin
         run: |
           git clone --depth 1 https://github.com/Pranay7ej/tinyplayer.git tp
-          cmake -S tp -B tp/build -DTP_BUILD_TESTS=OFF -DTP_WITH_SDL=OFF \
+          .github/run_and_report.sh tinyplayer-configure cmake -S tp -B tp/build -DTP_BUILD_TESTS=OFF -DTP_WITH_SDL=OFF \
             -DCMAKE_CXX_COMPILER=clang++-18 \
             -DCMAKE_CXX_FLAGS="-fpass-plugin=$PWD/build/pass/SpanTracePass.so -mllvm -spantrace-filter=^tp::" \
             -DCMAKE_CXX_STANDARD_LIBRARIES="$PWD/build/runtime/libspantrace.a -lpthread"
