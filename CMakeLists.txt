@@ -31,10 +31,19 @@ set_target_properties(spantrace PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINA
 
 # --- pass --------------------------------------------------------------------
 if(SPANTRACE_BUILD_PASS)
+  # No version in find_package: LLVM's version file only accepts an exact
+  # major.minor, so "18" would reject 18.1.x. Check the major by hand instead.
   if(SPANTRACE_REQUIRE_PASS)
-    find_package(LLVM 18 CONFIG REQUIRED)
+    find_package(LLVM CONFIG REQUIRED)
   else()
-    find_package(LLVM 18 CONFIG)
+    find_package(LLVM CONFIG)
+  endif()
+  if(LLVM_FOUND AND NOT LLVM_VERSION_MAJOR EQUAL 18)
+    if(SPANTRACE_REQUIRE_PASS)
+      message(FATAL_ERROR "need LLVM 18, found ${LLVM_PACKAGE_VERSION}")
+    endif()
+    message(WARNING "LLVM ${LLVM_PACKAGE_VERSION} found, but the pass targets LLVM 18")
+    set(LLVM_FOUND FALSE)
   endif()
   if(LLVM_FOUND)
     message(STATUS "LLVM ${LLVM_PACKAGE_VERSION} from ${LLVM_DIR}")
