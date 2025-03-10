@@ -53,6 +53,24 @@ fib is the worst case since the function does basically nothing, so the tracing 
 
 also the full trace was 94 MB and still dropped a lot of events, so for hot code either use a filter or a bigger buffer.
 
+## tracing lsmkv
+
+CI also builds my [lsmkv](https://github.com/Pranay7ej/lsmkv) storage engine with the plugin (filter `^lsmkv::`) and runs its benchmark on 100k keys. top of the background thread:
+
+```
+function                                                   calls    total ms     self ms
+lsmkv::DBImpl::BackgroundLoop()                                1     351.649     195.805
+lsmkv::WritableFile::Sync()                                    9      82.755      82.755
+lsmkv::TableBuilder::WriteRawBlock(...)                     2719      35.046      30.327
+lsmkv::(anon)::TwoLevelIterator::key() const              528266      39.623      26.963
+lsmkv::(anon)::MergingIterator::FindSmallest()             83837      93.858      20.951
+lsmkv::DBImpl::WriteLevel0Table(...)                           3     144.457      16.936
+```
+
+two things I didn't expect: fsync is a quarter of the background thread's time, and a big chunk of compaction is just `key()` calls going through three layers of iterators (merging -> level -> two-level -> block), half a million of them. so the tracing overhead is inflating those, but it does point at the virtual call chain as the thing to flatten.
+
+it also dropped ~63M events on the main thread even with a 4M event buffer, which is why the foreground side is missing from the table. tracing everything in a hot loop just produces too much.
+
 ## limitations
 - exceptions and longjmp skip the exit call. the json writer tries to fix up the nesting but the timing on those is off
 - inlined functions don't show up (on purpose)
