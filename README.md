@@ -53,20 +53,6 @@ fib is the worst case since the function does basically nothing, so the tracing 
 
 also the full trace was 94 MB and still dropped a lot of events, so for hot code either use a filter or a bigger buffer.
 
-## tracing tinyplayer
-
-CI also builds my [tinyplayer](https://github.com/Pranay7ej/tinyplayer) with the plugin (filter `^tp::`) and plays 20 s of video:
-
-```
-function                                                     calls    total ms     self ms
-tp::FfmpegPipeline::DecodeSome()                              3542     849.825     721.662
-tp::FfmpegPipeline::Decoder::ConvertVideo(tp::VideoFrame*)     356     124.863     124.863
-tp::FfmpegPipeline::PresentVideo()                            2599      10.338       9.772
-tp::Session::Step()                                           2599     866.456       0.920
-```
-
-so it's almost all decoding (ffmpeg itself isn't instrumented, it shows up as self time of DecodeSome), then frame copying. the actual player logic barely shows up.
-
 ## limitations
 - exceptions and longjmp skip the exit call. the json writer tries to fix up the nesting but the timing on those is off
 - inlined functions don't show up (on purpose)

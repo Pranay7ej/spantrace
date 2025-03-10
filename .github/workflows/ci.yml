@@ -48,38 +48,36 @@ jobs:
             build/overhead/*.json
             overhead.md
 
-  tinyplayer-example:
-    name: trace tinyplayer (real-world example)
+  lsmkv-example:
+    name: trace lsmkv (real-world example)
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v5
-      - name: Install deps
+      - name: Install LLVM 18
         run: |
           sudo apt-get update
           sudo apt-get install -y llvm-18-dev llvm-18-tools clang-18 libpolly-18-dev \
-            libzstd-dev zlib1g-dev libedit-dev libffi-dev libcurl4-openssl-dev \
-            ffmpeg libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+            libzstd-dev zlib1g-dev libedit-dev libffi-dev libcurl4-openssl-dev
       - name: Build spantrace
         run: |
           cmake -S . -B build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm -DSPANTRACE_BUILD_TESTS=OFF -DSPANTRACE_REQUIRE_PASS=ON
           cmake --build build -j
-      - name: Build tinyplayer with the plugin
+      - name: Build lsmkv with the plugin
         run: |
-          git clone --depth 1 https://github.com/Pranay7ej/tinyplayer.git tp
-          .github/run_and_report.sh tinyplayer-configure cmake -S tp -B tp/build -DTP_BUILD_TESTS=OFF -DTP_WITH_SDL=OFF \
-            -DCMAKE_CXX_COMPILER=clang++-18 \
-            -DCMAKE_CXX_FLAGS="-fpass-plugin=$PWD/build/pass/SpanTracePass.so -Xclang -load -Xclang $PWD/build/pass/SpanTracePass.so -mllvm -spantrace-filter=^tp::" \
+          git clone --depth 1 https://github.com/Pranay7ej/lsmkv.git kv
+          .github/run_and_report.sh lsmkv-configure cmake -S kv -B kv/build -DLSMKV_BUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DCMAKE_CXX_FLAGS="-fpass-plugin=$PWD/build/pass/SpanTracePass.so -Xclang -load -Xclang $PWD/build/pass/SpanTracePass.so -mllvm -spantrace-filter=^lsmkv::" \
             -DCMAKE_CXX_STANDARD_LIBRARIES="$PWD/build/runtime/libspantrace.a -lpthread"
-          .github/run_and_report.sh tinyplayer-build cmake --build tp/build -j --target tinyplayer
-      - name: Play 20 s headless and trace it
+          .github/run_and_report.sh lsmkv-build cmake --build kv/build -j --target db_bench
+      - name: Run db_bench traced
         run: |
-          tp/tools/make_test_stream.sh stream 20
-          SPANTRACE_OUT=tinyplayer.json tp/build/tinyplayer stream --headless --kbps 8000
-          python3 tools/top.py tinyplayer.json -n 15 | tee top.txt
-          .github/run_and_report.sh top-tinyplayer cat top.txt
-          { echo '## tinyplayer'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          SPANTRACE_OUT=lsmkv.json SPANTRACE_BUF_EVENTS=4194304 kv/build/db_bench --num 100000 --dir /tmp/kvbench
+          python3 tools/top.py lsmkv.json -n 15 | tee top.txt
+          .github/run_and_report.sh top-lsmkv cat top.txt
+          { echo '## lsmkv'; echo '```'; cat top.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: tinyplayer-trace
-          path: tinyplayer.json
+          name: lsmkv-trace
+          path: lsmkv.json
